@@ -6,20 +6,44 @@
 #   - sign      → NEX-285 (placeholder; real signing pending cert decision)
 #   - test      → NEX-284 (cross-component integration smoke)
 
-.PHONY: fetch assemble sign test clean help
+.PHONY: validate validate-online resolve diff fetch assemble sign test test-go clean help
 
 help:
 	@echo "nexus-platform — bundle assembly + integration testing"
 	@echo ""
-	@echo "Targets:"
-	@echo "  make fetch     fetch pinned component binaries (NEX-285)"
-	@echo "  make assemble  assemble per-OS/arch bundle archives (NEX-285)"
-	@echo "  make sign      sign archives (placeholder until cert lands)"
-	@echo "  make test      run cross-component integration smoke (NEX-284)"
-	@echo "  make clean     remove bin/ and dist/"
+	@echo "Manifest tooling (NEX-283, bundlectl):"
+	@echo "  make validate        offline schema check on bundle.toml"
+	@echo "  make validate-online schema check + probe GitHub for each pinned tag"
+	@echo "  make resolve         emit resolved JSON (download URLs per asset)"
+	@echo "  make diff OLD=...    diff bundle.toml against a previous version"
 	@echo ""
-	@echo "All targets currently print 'not yet implemented' — this scaffold"
-	@echo "only proves the repo layout. See NEX-281 cluster for impl tickets."
+	@echo "Bundle assembly (NEX-285):"
+	@echo "  make fetch           fetch pinned component binaries [not yet implemented]"
+	@echo "  make assemble        assemble per-OS/arch bundle archives [not yet implemented]"
+	@echo "  make sign            sign archives (placeholder; no cert yet)"
+	@echo ""
+	@echo "Integration test (NEX-284):"
+	@echo "  make test            cross-component bundle smoke [not yet implemented]"
+	@echo ""
+	@echo "Misc:"
+	@echo "  make test-go         run bundlectl's own Go tests"
+	@echo "  make clean           remove bin/ and dist/"
+
+validate:
+	@go run ./cmd/bundlectl validate bundle.toml
+
+validate-online:
+	@go run ./cmd/bundlectl validate --online bundle.toml
+
+resolve:
+	@go run ./cmd/bundlectl resolve bundle.toml
+
+diff:
+	@if [ -z "$(OLD)" ]; then echo "usage: make diff OLD=<path-to-old-bundle.toml>" >&2; exit 1; fi
+	@go run ./cmd/bundlectl diff $(OLD) bundle.toml
+
+test-go:
+	@go test ./...
 
 fetch:
 	@echo "fetch: not yet implemented (NEX-285)" >&2

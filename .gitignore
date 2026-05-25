@@ -1,0 +1,5 @@
+# Build outputs from `make fetch` + `make assemble` (NEX-285).
+# These are reproducible from bundle.toml + the GitHub release tags
+# named there, so committing them would just bloat the repo.
+/bin/
+/dist/

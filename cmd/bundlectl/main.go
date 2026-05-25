@@ -27,6 +27,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/CarriedWorldUniverse/nexus-platform/internal/bundle"
@@ -47,6 +48,10 @@ func main() {
 		err = runDiff(args)
 	case "resolve":
 		err = runResolve(args)
+	case "fetch":
+		err = runFetch(args)
+	case "assemble":
+		err = runAssemble(args)
 	case "help", "-h", "--help":
 		usage()
 		return
@@ -66,6 +71,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  bundlectl validate <bundle.toml> [--online]")
 	fmt.Fprintln(os.Stderr, "  bundlectl diff <old.toml> <new.toml>")
 	fmt.Fprintln(os.Stderr, "  bundlectl resolve <bundle.toml> [-o <path>]")
+	fmt.Fprintln(os.Stderr, "  bundlectl fetch <bundle.toml> --target-dir <bin>")
+	fmt.Fprintln(os.Stderr, "  bundlectl assemble <bundle.toml> --bin-dir <bin> --dist-dir <dist>")
 }
 
 func runValidate(args []string) error {
@@ -169,5 +176,73 @@ func runResolve(args []string) error {
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "wrote %d bytes to %s\n", len(buf), strings.TrimSpace(*outPath))
+	return nil
+}
+
+func runFetch(args []string) error {
+	fs := flag.NewFlagSet("fetch", flag.ExitOnError)
+	targetDir := fs.String("target-dir", "bin", "directory to extract per-OS binary trees into")
+	_ = fs.Parse(args)
+	if fs.NArg() != 1 {
+		return errors.New("fetch: expected exactly one bundle.toml path")
+	}
+	m, err := bundle.Load(fs.Arg(0))
+	if err != nil {
+		return err
+	}
+	if verr := m.Validate(); verr != nil {
+		return fmt.Errorf("schema validation failed:\n  - %s", verr)
+	}
+	r := bundle.DefaultResolver()
+	resolved, err := r.Resolve(context.Background(), m)
+	if err != nil {
+		return err
+	}
+	return bundle.Fetch(context.Background(), resolved, bundle.FetchOptions{
+		TargetDir: *targetDir,
+		Token:     os.Getenv("GITHUB_TOKEN"),
+		Logger:    func(format string, args ...any) { fmt.Fprintf(os.Stderr, "  "+format+"\n", args...) },
+	})
+}
+
+func runAssemble(args []string) error {
+	fs := flag.NewFlagSet("assemble", flag.ExitOnError)
+	binDir := fs.String("bin-dir", "bin", "root of per-OS-arch binary tree (output of `bundlectl fetch`)")
+	distDir := fs.String("dist-dir", "dist", "where to write the assembled bundle archives + checksums + MANIFEST")
+	_ = fs.Parse(args)
+	if fs.NArg() != 1 {
+		return errors.New("assemble: expected exactly one bundle.toml path")
+	}
+	m, err := bundle.Load(fs.Arg(0))
+	if err != nil {
+		return err
+	}
+	if verr := m.Validate(); verr != nil {
+		return fmt.Errorf("schema validation failed:\n  - %s", verr)
+	}
+	// Extras: install scripts + README + sample MCP + LICENSE +
+	// bundle.toml (for traceability). Paths are relative to the
+	// repo root where bundlectl is run.
+	extras := []bundle.ExtraFile{
+		{Path: "install.sh", ArchivePath: "install.sh", Executable: true},
+		{Path: "install.ps1", ArchivePath: "install.ps1"},
+		{Path: "README.md", ArchivePath: "README.md"},
+		{Path: "LICENSE", ArchivePath: "LICENSE"},
+		{Path: "bundle.toml", ArchivePath: "bundle.toml"},
+		{Path: "templates/sample.mcp.json", ArchivePath: "templates/sample.mcp.json"},
+	}
+	results, err := bundle.Assemble(bundle.AssembleOptions{
+		BinDir:   *binDir,
+		DistDir:  *distDir,
+		Manifest: m,
+		Extras:   extras,
+		Logger:   func(format string, args ...any) { fmt.Fprintf(os.Stderr, "  "+format+"\n", args...) },
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range results {
+		fmt.Fprintf(os.Stdout, "%s  %s\n", r.SHA256, filepath.Base(r.ArchivePath))
+	}
 	return nil
 }

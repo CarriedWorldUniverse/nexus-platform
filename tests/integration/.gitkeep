@@ -1,0 +1,5 @@
+# Placeholder so the directory ships in the scaffold. NEX-284 populates
+# this with the cross-component integration test harness:
+#   harness/   — process spawning, port allocation, log capture
+#   fixtures/  — test keyfiles, sample bundle.toml, stub Jira responses
+#   smoke_test.go — the 8-step bundle smoke

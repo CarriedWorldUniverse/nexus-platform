@@ -1,0 +1,31 @@
+# bundle.toml — nexus-platform bundle manifest
+#
+# Source of truth for "which versions go together". Each commit to this
+# file is a release decision; diffing two commits answers "what changed
+# between bundle v1.0 and v1.1".
+#
+# Schema + validation tooling: NEX-283 (cmd/bundlectl)
+# Update workflow: edit pins → PR → CI runs integration test against
+# the new pins → tag bundle-v* → release.yml fetches + assembles +
+# publishes archives.
+
+[bundle]
+version  = "0.1.0"             # the BUNDLE's semver; bumps independently of component versions
+released = "2026-05-25"        # ISO date this manifest was committed
+
+# Components shipped in the base bundle. Each value is a git tag in the
+# named repo (CarriedWorldUniverse/<key>). Components without their own
+# repo (agentfunnel, agora) ship from the nexus repo and inherit the
+# nexus tag — they do NOT appear here.
+[components]
+nexus   = "v0.2.0"             # last released nexus tag (current main is v0.2.0-46-g... — update on next release)
+ledger  = "v0.1.2"             # links REST + external_refs
+bridle  = "v0.1.2-0.20260523081828-4e1548b62f7c"  # pseudo-version pinning the current nexus dep
+
+# Addons — explicitly NOT in the base bundle. The ? suffix flags
+# unreleased/optional components. Operator deploys these separately
+# via their own bundle once they reach v1.
+[addons]
+interchange = "v0.0.0?"        # network protocol (NEX-163)
+vessel      = "v0.0.0?"
+cairn       = "v0.0.0?"        # ledger primary UI (NEX-223)

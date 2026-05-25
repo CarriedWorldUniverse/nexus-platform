@@ -1,0 +1,17 @@
+{
+  "_comment": "nexus-platform — sample MCP config for Claude Code integration. NEX-286 populates the real paths during install based on the data dir. This template carries the canonical structure so operators know the shape even when reading the source.",
+  "mcpServers": {
+    "nexus-comms": {
+      "command": "{{ NEXUS_BIN_DIR }}/nexus-comms-mcp",
+      "args": ["-keyfile", "{{ DATA_DIR }}/keyfiles/keel.keyfile.json"]
+    },
+    "nexus-jira": {
+      "command": "{{ NEXUS_BIN_DIR }}/nexus-jira-mcp",
+      "args": ["-keyfile", "{{ DATA_DIR }}/keyfiles/keel.keyfile.json"]
+    },
+    "nexus-imap": {
+      "command": "{{ NEXUS_BIN_DIR }}/nexus-imap-mcp",
+      "args": ["-keyfile", "{{ DATA_DIR }}/keyfiles/keel.keyfile.json"]
+    }
+  }
+}

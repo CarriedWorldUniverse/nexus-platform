@@ -1,0 +1,44 @@
+# ci.yml — placeholder PR-time CI for nexus-platform.
+#
+# Real workflow lands in NEX-288:
+#   - bundlectl validate bundle.toml (NEX-283)
+#   - make fetch (NEX-285)
+#   - go test ./tests/integration/... (NEX-284)
+#   - upload test logs as artifact on failure
+#   - block merge on failure
+#
+# This placeholder just verifies the basic repo health checks pass
+# (file existence, schema sanity at a low bar) so the repo isn't
+# entirely CI-less from day one.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scaffold-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify scaffold files present
+        run: |
+          set -e
+          for f in bundle.toml Makefile install.sh install.ps1 README.md LICENSE templates/sample.mcp.json; do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing scaffold file: $f"
+              exit 1
+            fi
+          done
+          echo "scaffold OK"
+
+      - name: Verify LICENSE is Apache 2.0
+        run: |
+          if ! grep -q "Apache License" LICENSE; then
+            echo "::error::LICENSE is not Apache 2.0"
+            exit 1
+          fi
+          echo "license OK"

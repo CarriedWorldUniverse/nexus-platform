@@ -42,3 +42,24 @@ jobs:
             exit 1
           fi
           echo "license OK"
+
+  bundlectl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: bundlectl unit tests
+        run: go test ./...
+
+      - name: validate bundle.toml (schema)
+        run: go run ./cmd/bundlectl validate bundle.toml
+
+      - name: validate bundle.toml (online — confirm tags resolve)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: go run ./cmd/bundlectl validate --online bundle.toml

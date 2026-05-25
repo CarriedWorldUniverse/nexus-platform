@@ -46,12 +46,10 @@ test-go:
 	@go test ./...
 
 fetch:
-	@echo "fetch: not yet implemented (NEX-285)" >&2
-	@exit 1
+	@go run ./cmd/bundlectl fetch bundle.toml --target-dir bin
 
 assemble:
-	@echo "assemble: not yet implemented (NEX-285)" >&2
-	@exit 1
+	@go run ./cmd/bundlectl assemble bundle.toml --bin-dir bin --dist-dir dist
 
 sign:
 	@echo "sign: no signing cert configured; skipping" >&2

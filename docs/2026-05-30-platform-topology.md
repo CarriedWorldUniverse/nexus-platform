@@ -1,7 +1,47 @@
 # CWU Platform Topology
 
 **Status:** design draft for review · 2026-05-30
-**Scope:** how the CWU hosted product runs — the deployment topology, service boundaries, auth between services, the public edge, the push channel to private clients, and the dMon-as-k3s rehearsal path.
+**Scope:** how the CWU hosted product runs *eventually* — and, more importantly, the **much smaller v1 we actually build now**.
+
+## 0. v1 = DOGFOOD, not launch (the governing constraint)
+
+Operator (2026-05-30): **"just enough capability for us to run a real use case for our own use."** v1 is **not** a product launch. The first and only "customer" is **us** — our own agent network (the dMon fleet) using herald + cairn + ledger + commonplace for **real work**. We prove the capability by *using it*, then generalize.
+
+This **defers most of the platform architecture** below. Build only what serving *one known entity (ourselves)* requires:
+
+| Platform feature (designed below, the DESTINATION) | In the dogfood v1? |
+|---|---|
+| herald + cairn + ledger (+ commonplace) as herald-gated services on k3s | ✅ **yes — the capability we use** |
+| service-to-service auth via heraldauth (+ SA bootstrap) | ✅ yes — proves the shape |
+| single-node k3s, in-cluster Postgres, S3 | ✅ yes |
+| multi-tenant isolation / arbitrary unknown clients | ❌ later — it's just us, one org |
+| public well-known endpoint / open client boundary | ❌ later — private/tailnet is fine |
+| interchange ingress (public webhook edge) | ⚠️ only if our use case needs inbound webhooks now |
+| interchange relay (push to a no-public-ports nexus) | ⚠️ only if our nexus is *separate* from the cluster |
+
+**Everything from §1 onward describes the destination.** Read it as the target the v1 manifests grow into — not the v1 build list. The v1 build list is §7, trimmed to the ✅ rows.
+
+### 0a. The dogfood split on dMon (what's in-cluster vs native)
+
+Critical v1 shape (operator 2026-05-30): **k3s hosts ONLY the product services; nexus stays running natively as it is today.**
+
+```
+  dMon
+  ┌──────────────────────────────────────────────────────────┐
+  │  NATIVE (unchanged, as today)      k3s cluster (new)       │
+  │  ┌────────────────────┐            ┌────────────────────┐ │
+  │  │ nexus broker + Keel │            │ herald             │ │
+  │  │ + 6 aspect units    │── herald ──│ cairn              │ │
+  │  │ (THE CLIENT)        │   tokens   │ ledger             │ │
+  │  │                     │──────────▶ │ commonplace-svc    │ │
+  │  └────────────────────┘            └────────────────────┘ │
+  └──────────────────────────────────────────────────────────┘
+```
+
+- **k3s (rootful, systemd):** herald, cairn, ledger, commonplace-service (the hosted *product* — the eventual multi-tenant backend), + in-cluster Postgres.
+- **Native (untouched):** nexus broker + Keel + the 6 aspect systemd units — the live fleet keeps running, zero migration risk.
+- **Why this is faithful, not a shortcut:** in production, nexus is the *customer's self-hosted client* (their box) and herald/cairn/ledger are the *hosted product* (the cluster). Keeping nexus native + product-in-cluster makes dMon dogfood the **actual client↔product boundary** — nexus connects to the cluster the same way a customer's nexus will connect to the hosted platform. This is also exactly NEX-382 (re-point nexus auth at herald) + NEX-383 (runtime mint client) with a real target.
+- **Image flow:** `podman build` → `podman save | k3s ctr images import` (no registry; services are tiny Go static images). Local registry deferred (would mirror ECR-pull later).
 
 ## 1. What the product is (the frame this serves)
 

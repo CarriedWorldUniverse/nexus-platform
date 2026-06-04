@@ -18,14 +18,16 @@ nexus-platform/
 ├── install.sh / install.ps1 # operator entry point (packed into each archive)
 ├── README.md                # this file
 ├── LICENSE                  # Apache 2.0
+├── cmd/
+│   └── bundlectl/           # bundle.toml validation + assembly CLI
+├── internal/
+│   └── bundle/              # resolve / fetch / assemble / diff / manifest
 ├── templates/
-│   ├── sample.mcp.json      # MCP wiring template emitted by install
-│   └── bundle-README.md     # the README shipped INSIDE each archive
+│   └── sample.mcp.json      # MCP wiring template emitted by install
 ├── tests/
-│   └── integration/         # cross-component bundle smoke test (NEX-284)
+│   └── integration/         # cross-component bundle smoke test
 └── .github/workflows/
-    ├── ci.yml               # PR-time integration test (NEX-288)
-    └── bundle.yml           # on-tag bundle assemble + release (NEX-288)
+    └── ci.yml               # PR-time integration test (NEX-288)
 ```
 
 ## Design
@@ -48,15 +50,15 @@ Operators download one archive, run `./install.sh`, get a working network.
 
 ## Status
 
-Initial scaffold (NEX-282). Implementation in progress per
+Under active development per
 [NEX-281 epic](https://carriedworlduniverse.atlassian.net/browse/NEX-281):
 
-- [ ] NEX-283 — bundle.toml schema + `bundlectl` validation tooling
+- [x] NEX-283 — bundle.toml schema + `bundlectl` validation tooling
 - [ ] NEX-284 — cross-component integration test harness
-- [ ] NEX-285 — bundle assembly (fetch + assemble + sign placeholder)
-- [ ] NEX-286 — install.sh / install.ps1
+- [x] NEX-285 — bundle assembly (resolve + fetch + assemble + diff + manifest)
+- [x] NEX-286 — install.sh / install.ps1
 - [ ] NEX-287 — bundle README + first-time-operator guide
-- [ ] NEX-288 — CI workflows (PR + on-tag)
+- [ ] NEX-288 — release workflow (PR-time CI in place; on-tag assemble + publish pending)
 
 ## License
 

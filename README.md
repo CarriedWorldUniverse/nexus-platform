@@ -46,6 +46,25 @@ When a new bundle is needed:
 
 Operators download one archive, run `./install.sh`, get a working network.
 
+## Platform architecture (where the bundle deploys)
+
+The bundle distributes the components; this is the topology they run in. Full design: [`docs/2026-05-30-platform-topology.md`](docs/2026-05-30-platform-topology.md).
+
+- **Three modes, one software:** standalone/embedded (auth bypassed, services co-located — what dMon runs today), self-hosted platform, and we-host. Modes 2 and 3 are identical software, different operator.
+- **In-cluster vs native split:** in the hosted shape, **nexus stays native** (the client side — broker + Keel + aspects) and the **product services run on k3s** (herald, cairn, ledger, commonplace). On dMon, k3s is used for boundary *isolation* (ClusterIP forces native nexus through the ingress with real auth), not for orchestration.
+- **Substrate:** single-node k3s (on dMon now, a small ARM EC2 as the eventual target — EKS is the destination, not the start). Same Deployment + Service manifests survive the lift.
+- **Edge:** interchange is the single ingress — a public request edge plus a push relay (clients with no public ports dial out and hold a connection; the relay pushes events down it).
+
+### Data layer
+
+There is **no shared database**. Services are herald-gated and never read each other's tables, so each service owns its own store:
+
+- **Per-service SQLite** is the system of record (herald, ledger, commonplace/FTS5+sqlite-vec, cairn) — it's what's already built, and Postgres's multi-client win doesn't apply with no shared dataset. **Postgres is not the default** (an earlier draft's "Postgres in-cluster" is retracted).
+- **Durability via litestream → S3:** each SQLite file is continuously replicated to S3 for point-in-time recovery, with zero DB-server ops.
+- **Object storage on S3** for cairn repos/LFS/artifacts (dovetails with porter as a casket-encrypted backing layer).
+- **Redis = cache + relay pub/sub, not storage:** hot slow-changing lookups, and cross-pod fan-out for the interchange relay once it scales past one pod. Not v1-critical.
+- **Upgrade path is per-service, not "migrate all to RDS":** Turso/libSQL for the SQLite services, Neon only where a service genuinely needs Postgres semantics.
+
 ## Status
 
 Initial scaffold (NEX-282). Implementation in progress per
